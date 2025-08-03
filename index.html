@@ -5,19 +5,16 @@
     <title>Perfil FV</title>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        text-align: center;
+      #chart-container {
+        position: relative;
+        width: 100%;
+        height: 620px;
       }
       #title {
         font-size: 20px;
         font-weight: bold;
-        margin: 20px 0 10px;
-      }
-      #chart-container {
-        position: relative;
-        width: 100%;
-        height: 600px;
+        text-align: center;
+        margin-bottom: 10px;
       }
       #chart_div {
         width: 100%;
@@ -30,14 +27,14 @@
         background-color: rgba(255, 255, 255, 0.9);
         padding: 8px 12px;
         border: 1px solid #ccc;
+        font-family: Arial, sans-serif;
         font-size: 14px;
-        text-align: left;
       }
     </style>
   </head>
   <body>
-    <div id="title">Perfil FV</div>
     <div id="chart-container">
+      <div id="title">Perfil FV</div>
       <div id="chart_div"></div>
       <div id="r2_label"></div>
     </div>
@@ -50,6 +47,7 @@
         fetch('https://script.google.com/macros/s/AKfycbz1UMEtWPPXua2EY_CVuCoXjAl414Y9QaooxqBDw5mrvLParCWtVhvl-8w0WpLkCkOzEA/exec')
           .then(response => response.json())
           .then(data => {
+            const headers = data[0];
             const rows = data.slice(1);
 
             const dataTable = new google.visualization.DataTable();
@@ -58,19 +56,23 @@
             dataTable.addColumn('number', 'Best Profile');
             dataTable.addRows(rows);
 
+            // Filtrar puntos válidos
             const serie1 = rows.filter(r => r[1] != null).map(r => [r[0], r[1]]);
             const serie2 = rows.filter(r => r[2] != null).map(r => [r[0], r[2]]);
 
+            const minX = Math.min(...serie1.map(r => r[0]));
+
+            // Cálculo de regresión lineal
             const { a: m1, b: b1, r2: r21 } = regresionLineal(serie1);
             const { a: m2, b: b2, r2: r22 } = regresionLineal(serie2);
-
-            const xMin = Math.min(...serie1.map(p => p[0]));
 
             const options = {
               hAxis: {
                 title: 'VMP (m/s)',
                 titleTextStyle: { italic: true },
-                viewWindow: { min: xMin }
+                viewWindow: {
+                  min: minX
+                }
               },
               vAxis: {
                 title: 'Carga (Kg)',
@@ -105,6 +107,7 @@
             const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
             chart.draw(dataTable, options);
 
+            // Mostrar R² y ecuaciones
             const formatNum = num => Math.abs(num) < 1e-3 ? num.toExponential(2) : num.toFixed(2);
             const signo = v => (v >= 0 ? '+' : '−');
 
