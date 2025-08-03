@@ -24,9 +24,18 @@
         font-family: Arial, sans-serif;
         font-size: 14px;
       }
+      .chart-title {
+        text-align: center;
+        font-size: 20px;
+        font-weight: bold;
+        margin-top: 20px;
+        margin-bottom: -40px;
+        font-family: Arial, sans-serif;
+      }
     </style>
   </head>
   <body>
+    <div class="chart-title">Perfil FV</div>
     <div id="chart-container">
       <div id="chart_div"></div>
       <div id="r2_label"></div>
@@ -49,25 +58,22 @@
             dataTable.addColumn('number', 'Best Profile');
             dataTable.addRows(rows);
 
-            // Filtrar puntos válidos
             const serie1 = rows.filter(r => r[1] != null).map(r => [r[0], r[1]]);
             const serie2 = rows.filter(r => r[2] != null).map(r => [r[0], r[2]]);
 
-            // Cálculo de regresión lineal
             const { a: m1, b: b1, r2: r21 } = regresionLineal(serie1);
             const { a: m2, b: b2, r2: r22 } = regresionLineal(serie2);
 
+            const minX = Math.min(...serie1.map(p => p[0]));
+
             const options = {
-              title: 'Perfil FV',
-              titleTextStyle: {
-                bold: true,
-                fontSize: 18,
-                color: '#000',
-                alignment: 'center'
-              },
+              title: '',
               hAxis: {
                 title: 'VMP (m/s)',
-                titleTextStyle: { italic: true }
+                titleTextStyle: { italic: true },
+                viewWindow: {
+                  min: minX
+                }
               },
               vAxis: {
                 title: 'Carga (Kg)',
@@ -102,7 +108,6 @@
             const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
             chart.draw(dataTable, options);
 
-            // Mostrar R² y ecuaciones en esquina
             const formatNum = num => Math.abs(num) < 1e-3 ? num.toExponential(2) : num.toFixed(2);
             const signo = v => (v >= 0 ? '+' : '−');
 
@@ -137,4 +142,5 @@
     </script>
   </body>
 </html>
+
 
