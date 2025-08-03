@@ -27,21 +27,22 @@
               vAxis: {
                 title: 'Carga (Kg)'
               },
-              legend: { position: 'bottom' },
+              legend: {
+                position: 'bottom',
+                textStyle: { color: '#000' }
+              },
               trendlines: {
                 0: {
                   type: 'linear',
                   color: 'blue',
-                  labelInLegend: 'Tendencia Serie 1',
                   showR2: true,
-                  visibleInLegend: true
+                  visibleInLegend: false
                 },
                 1: {
                   type: 'linear',
                   color: 'red',
-                  labelInLegend: 'Tendencia Serie 2',
                   showR2: true,
-                  visibleInLegend: true
+                  visibleInLegend: false
                 }
               },
               series: {
@@ -52,15 +53,45 @@
 
             var chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
             chart.draw(dataTable, options);
+
+            // Espera a que se renderice para insertar el R²
+            google.visualization.events.addListener(chart, 'ready', function () {
+              const layout = chart.getChartLayoutInterface();
+              const container = document.getElementById('chart_div');
+
+              // Elimina cualquier rótulo previo
+              const oldAnnotations = container.querySelectorAll('.r2-annotation');
+              oldAnnotations.forEach(e => e.remove());
+
+              // R² de las dos series
+              const r2Text = document.createElement('div');
+              r2Text.className = 'r2-annotation';
+              r2Text.innerHTML = `
+                <div style="text-align:right; font-size: 14px; font-family: sans-serif;">
+                  <b style="color:blue">R² (Serie 1)</b>: ${chart.getOption('trendlines')[0]?.rSquared?.toFixed?.(3) || '—'}<br>
+                  <b style="color:red">R² (Serie 2)</b>: ${chart.getOption('trendlines')[1]?.rSquared?.toFixed?.(3) || '—'}
+                </div>`;
+              r2Text.style.position = 'absolute';
+              r2Text.style.top = '40px';
+              r2Text.style.right = '60px';
+              container.appendChild(r2Text);
+            });
           })
           .catch(error => {
             console.error("Error al cargar los datos:", error);
           });
       }
     </script>
+    <style>
+      #chart_div {
+        position: relative;
+        width: 100%;
+        height: 600px;
+      }
+    </style>
   </head>
   <body>
-    <div id="chart_div" style="width: 100%; height: 600px;"></div>
+    <div id="chart_div"></div>
   </body>
 </html>
 
