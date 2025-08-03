@@ -5,72 +5,76 @@
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script>
       google.charts.load('current', { packages: ['corechart'] });
-
       google.charts.setOnLoadCallback(drawChart);
 
       async function drawChart() {
-        const response = await fetch(
-          'https://script.google.com/macros/s/AKfycbz1UMEtWPPXua2EY_CVuCoXjAl414Y9QaooxqBDw5mrvLParCWtVhvl-8w0WpLkCkOzEA/exec'
-        );
-        const raw = await response.json();
+        try {
+          const response = await fetch(
+            'https://script.google.com/macros/s/AKfycbz1UMEtWPPXua2EY_CVuCoXjAl414Y9QaooxqBDw5mrvLParCWtVhvl-8w0WpLkCkOzEA/exec'
+          );
+          const raw = await response.json();
 
-        // Fusionar por X
-        const merged = {};
-        raw.slice(1).forEach(([x, y1, y2]) => {
-          if (!merged[x]) merged[x] = [x, null, null];
-          if (y1 !== null) merged[x][1] = y1;
-          if (y2 !== null) merged[x][2] = y2;
-        });
+          // Fusionar datos con misma X
+          const merged = {};
+          raw.slice(1).forEach(([x, y1, y2]) => {
+            if (!merged[x]) merged[x] = [x, null, null];
+            if (y1 !== null) merged[x][1] = y1;
+            if (y2 !== null) merged[x][2] = y2;
+          });
 
-        const data = [
-          ['VMP (m/s)', 'Serie 1', 'Serie 2'],
-          ...Object.values(merged)
-        ];
+          const data = [
+            ['VMP (m/s)', 'Serie 1', 'Serie 2'],
+            ...Object.values(merged)
+          ];
 
-        const dataTable = google.visualization.arrayToDataTable(data);
+          const dataTable = google.visualization.arrayToDataTable(data);
 
-        const options = {
-          title: 'Carga vs X',
-          hAxis: {
-            title: 'VMP (m/s)',
-            titleTextStyle: { italic: true }
-          },
-          vAxis: {
-            title: 'Carga (Kg)'
-          },
-          legend: { position: 'bottom' },
-          series: {
-            0: {
-              color: 'blue',
-              pointSize: 5,
-              trendlines: {
-                0: {
-                  type: 'linear',
-                  color: 'blue',
-                  labelInLegend: 'Tendencia Serie 1',
-                  showR2: true,
-                  visibleInLegend: true
-                }
-              }
+          const options = {
+            title: 'Carga vs X',
+            hAxis: {
+              title: 'VMP (m/s)',
+              titleTextStyle: { italic: true }
             },
-            1: {
-              color: 'red',
-              pointSize: 5,
-              trendlines: {
-                0: {
-                  type: 'linear',
-                  color: 'red',
-                  labelInLegend: 'Tendencia Serie 2',
-                  showR2: true,
-                  visibleInLegend: true
+            vAxis: {
+              title: 'Carga (Kg)'
+            },
+            legend: { position: 'bottom' },
+            series: {
+              0: {
+                color: 'blue',
+                pointSize: 5,
+                trendlines: {
+                  0: {
+                    type: 'linear',
+                    color: 'blue',
+                    labelInLegend: 'Tendencia Serie 1',
+                    showR2: true,
+                    visibleInLegend: true
+                  }
+                }
+              },
+              1: {
+                color: 'red',
+                pointSize: 5,
+                trendlines: {
+                  0: {
+                    type: 'linear',
+                    color: 'red',
+                    labelInLegend: 'Tendencia Serie 2',
+                    showR2: true,
+                    visibleInLegend: true
+                  }
                 }
               }
             }
-          }
-        };
+          };
 
-        const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
-        chart.draw(dataTable, options);
+          const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
+          chart.draw(dataTable, options);
+        } catch (err) {
+          document.getElementById('chart_div').innerText = 'Error al cargar datos: ' + err;
+          console.error(err);
+        }
       }
     </script>
   </head>
@@ -78,4 +82,5 @@
     <div id="chart_div" style="width: 100%; height: 500px;"></div>
   </body>
 </html>
+
 
