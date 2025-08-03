@@ -1,127 +1,81 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8" />
-    <title>Gráfico con Tendencia</title>
+    <title>Carga vs VMP</title>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script>
       google.charts.load('current', { packages: ['corechart'] });
+
       google.charts.setOnLoadCallback(drawChart);
 
       async function drawChart() {
-        try {
-          const response = await fetch(
-            'https://script.google.com/macros/s/AKfycbz1UMEtWPPXua2EY_CVuCoXjAl414Y9QaooxqBDw5mrvLParCWtVhvl-8w0WpLkCkOzEA/exec'
-          );
-          const rawData = await response.json();
+        const response = await fetch(
+          'https://script.google.com/macros/s/AKfycbz1UMEtWPPXua2EY_CVuCoXjAl414Y9QaooxqBDw5mrvLParCWtVhvl-8w0WpLkCkOzEA/exec'
+        );
+        const raw = await response.json();
 
-          const data = rawData.data;
+        // Fusionar por X
+        const merged = {};
+        raw.slice(1).forEach(([x, y1, y2]) => {
+          if (!merged[x]) merged[x] = [x, null, null];
+          if (y1 !== null) merged[x][1] = y1;
+          if (y2 !== null) merged[x][2] = y2;
+        });
 
-          const serie1 = [];
-          const serie2 = [];
+        const data = [
+          ['VMP (m/s)', 'Serie 1', 'Serie 2'],
+          ...Object.values(merged)
+        ];
 
-          // Extraer y convertir a números
-          for (let i = 0; i < data.length; i++) {
-            const x1 = parseFloat(data[i][3]);
-            const y1 = parseFloat(data[i][1]);
-            const x2 = parseFloat(data[i][8]);
-            const y2 = parseFloat(data[i][6]);
+        const dataTable = google.visualization.arrayToDataTable(data);
 
-            if (!isNaN(x1) && !isNaN(y1)) {
-              serie1.push([x1, y1]);
-            }
-            if (!isNaN(x2) && !isNaN(y2)) {
-              serie2.push([x2, y2]);
-            }
-          }
-
-          // Regresión lineal para ambas series
-          function linearRegression(data) {
-            const n = data.length;
-            const sumX = data.reduce((acc, val) => acc + val[0], 0);
-            const sumY = data.reduce((acc, val) => acc + val[1], 0);
-            const sumXY = data.reduce((acc, val) => acc + val[0] * val[1], 0);
-            const sumX2 = data.reduce((acc, val) => acc + val[0] * val[0], 0);
-
-            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-            const intercept = (sumY - slope * sumX) / n;
-
-            // R2
-            const meanY = sumY / n;
-            const ssTot = data.reduce((acc, val) => acc + (val[1] - meanY) ** 2, 0);
-            const ssRes = data.reduce((acc, val) => acc + (val[1] - (slope * val[0] + intercept)) ** 2, 0);
-            const r2 = 1 - ssRes / ssTot;
-
-            return { slope, intercept, r2 };
-          }
-
-          const reg1 = linearRegression(serie1);
-          const reg2 = linearRegression(serie2);
-
-          const chartData = new google.visualization.DataTable();
-          chartData.addColumn('number', 'VMP (m/s)');
-          chartData.addColumn('number', 'Serie 1');
-          chartData.addColumn('number', 'Serie 2');
-          chartData.addColumn('number', 'Tendencia Serie 1');
-          chartData.addColumn('number', 'Tendencia Serie 2');
-
-          const allX = [...serie1, ...serie2].map(p => p[0]);
-          const xMin = Math.min(...allX);
-          const xMax = Math.max(...allX);
-          const xStep = (xMax - xMin) / 50;
-
-          for (let x = xMin; x <= xMax; x += xStep) {
-            const y1 = reg1.slope * x + reg1.intercept;
-            const y2 = reg2.slope * x + reg2.intercept;
-
-            const punto1 = serie1.find(p => Math.abs(p[0] - x) < xStep / 2);
-            const punto2 = serie2.find(p => Math.abs(p[0] - x) < xStep / 2);
-
-            chartData.addRow([
-              x,
-              punto1 ? punto1[1] : null,
-              punto2 ? punto2[1] : null,
-              y1,
-              y2
-            ]);
-          }
-
-          const options = {
-            title: 'Carga vs VMP',
-            hAxis: { title: 'VMP (m/s)', titleTextStyle: { italic: true } },
-            vAxis: { title: 'Carga (Kg)' },
-            legend: { position: 'bottom' },
-            series: {
-              0: { color: 'blue', pointShape: 'circle', pointSize: 5 },
-              1: { color: 'red', pointShape: 'circle', pointSize: 5 },
-              2: { color: 'blue', lineDashStyle: [4, 4], visibleInLegend: true },
-              3: { color: 'red', lineDashStyle: [4, 4], visibleInLegend: true }
+        const options = {
+          title: 'Carga vs X',
+          hAxis: {
+            title: 'VMP (m/s)',
+            titleTextStyle: { italic: true }
+          },
+          vAxis: {
+            title: 'Carga (Kg)'
+          },
+          legend: { position: 'bottom' },
+          series: {
+            0: {
+              color: 'blue',
+              pointSize: 5,
+              trendlines: {
+                0: {
+                  type: 'linear',
+                  color: 'blue',
+                  labelInLegend: 'Tendencia Serie 1',
+                  showR2: true,
+                  visibleInLegend: true
+                }
+              }
             },
-            annotations: {
-              alwaysOutside: true
+            1: {
+              color: 'red',
+              pointSize: 5,
+              trendlines: {
+                0: {
+                  type: 'linear',
+                  color: 'red',
+                  labelInLegend: 'Tendencia Serie 2',
+                  showR2: true,
+                  visibleInLegend: true
+                }
+              }
             }
-          };
+          }
+        };
 
-          const chart = new google.visualization.LineChart(
-            document.getElementById('chart_div')
-          );
-          chart.draw(chartData, options);
-
-          // Mostrar ecuaciones y R²
-          document.getElementById('info').innerHTML = `
-            <p style="color:blue"><b>Serie 1:</b> y = ${reg1.slope.toFixed(2)}x + ${reg1.intercept.toFixed(2)}<br>R² = ${reg1.r2.toFixed(3)}</p>
-            <p style="color:red"><b>Serie 2:</b> y = ${reg2.slope.toFixed(2)}x + ${reg2.intercept.toFixed(2)}<br>R² = ${reg2.r2.toFixed(3)}</p>
-          `;
-        } catch (error) {
-          console.error('Error al cargar los datos:', error);
-          document.getElementById('chart_div').innerHTML = 'Error al cargar datos.';
-        }
+        const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
+        chart.draw(dataTable, options);
       }
     </script>
   </head>
   <body>
-    <div id="chart_div" style="width: 900px; height: 500px;"></div>
-    <div id="info" style="font-family:Arial; font-size:14px; padding-left:20px;"></div>
+    <div id="chart_div" style="width: 100%; height: 500px;"></div>
   </body>
 </html>
 
