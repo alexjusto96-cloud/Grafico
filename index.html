@@ -105,10 +105,10 @@
             finalTable.addRows(combined);
 
             // Mostrar R²
-            document.getElementById('r2_label').innerHTML = 
+            document.getElementById('r2_label').innerHTML = `
               <b>R² Serie 1:</b> ${r21.toFixed(3)}<br>
               <b>R² Serie 2:</b> ${r22.toFixed(3)}
-            ;
+            `;
 
             chart.draw(finalTable, options);
           });
