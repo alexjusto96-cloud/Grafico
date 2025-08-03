@@ -1,27 +1,39 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
-    <title>Carga vs VMP</title>
+    <meta charset="utf-8" />
+    <title>Perfil FV</title>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
-      .r2-label {
+      #chart-container {
+        position: relative;
+        width: 100%;
+        height: 600px;
+      }
+      #chart_div {
+        width: 100%;
+        height: 100%;
+      }
+      #r2_label {
         position: absolute;
         top: 40px;
         right: 60px;
-        background-color: white;
-        padding: 5px;
-        font-size: 14px;
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 8px 12px;
         border: 1px solid #ccc;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
       }
     </style>
   </head>
   <body>
-    <div id="chart_div" style="width: 100%; height: 600px;"></div>
-    <div class="r2-label" id="r2_label"></div>
+    <div id="chart-container">
+      <div id="chart_div"></div>
+      <div id="r2_label"></div>
+    </div>
 
     <script>
-      google.charts.load('current', {'packages':['corechart']});
+      google.charts.load('current', { packages: ['corechart'] });
       google.charts.setOnLoadCallback(drawChart);
 
       function drawChart() {
@@ -32,11 +44,27 @@
             const rows = data.slice(1);
 
             const dataTable = new google.visualization.DataTable();
-            headers.forEach(h => dataTable.addColumn(h.type, h.label));
+            dataTable.addColumn('number', 'VMP (m/s)');
+            dataTable.addColumn('number', 'Todas las cargas');
+            dataTable.addColumn('number', 'Best Profile');
             dataTable.addRows(rows);
 
+            // Filtrar puntos válidos
+            const serie1 = rows.filter(r => r[1] != null).map(r => [r[0], r[1]]);
+            const serie2 = rows.filter(r => r[2] != null).map(r => [r[0], r[2]]);
+
+            // Cálculo de regresión lineal
+            const { a: m1, b: b1, r2: r21 } = regresionLineal(serie1);
+            const { a: m2, b: b2, r2: r22 } = regresionLineal(serie2);
+
             const options = {
-              title: 'Carga vs VMP',
+              title: 'Perfil FV',
+              titleTextStyle: {
+                bold: true,
+                fontSize: 18,
+                color: '#000',
+                alignment: 'center'
+              },
               hAxis: {
                 title: 'VMP (m/s)',
                 titleTextStyle: { italic: true }
@@ -47,86 +75,63 @@
               },
               legend: {
                 position: 'bottom',
-                textStyle: { fontSize: 13 },
-                alignment: 'center'
+                alignment: 'center',
+                textStyle: { fontSize: 13 }
               },
               series: {
+                0: { color: 'blue', pointSize: 5 },
+                1: { color: 'red', pointSize: 5 }
+              },
+              trendlines: {
                 0: {
+                  type: 'linear',
                   color: 'blue',
-                  pointSize: 5
+                  visibleInLegend: false,
+                  lineWidth: 2
                 },
                 1: {
+                  type: 'linear',
                   color: 'red',
-                  pointSize: 5
-                },
-                2: {
-                  color: 'blue',
-                  lineWidth: 2,
-                  visibleInLegend: false
-                },
-                3: {
-                  color: 'red',
-                  lineWidth: 2,
-                  visibleInLegend: false
+                  visibleInLegend: false,
+                  lineWidth: 2
                 }
-              }
+              },
+              tooltip: { trigger: 'both' }
             };
 
             const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
+            chart.draw(dataTable, options);
 
-            // Calcular línea de tendencia para Serie 1
-            const serie1 = rows.filter(r => r[1] != null).map(r => [r[0], r[1]]);
-            const { a: m1, b: b1, r2: r21 } = regresionLineal(serie1);
+            // Mostrar R² y ecuaciones en esquina
+            const formatNum = num => Math.abs(num) < 1e-3 ? num.toExponential(2) : num.toFixed(2);
+            const signo = v => (v >= 0 ? '+' : '−');
 
-            // Calcular línea de tendencia para Serie 2
-            const serie2 = rows.filter(r => r[2] != null).map(r => [r[0], r[2]]);
-            const { a: m2, b: b2, r2: r22 } = regresionLineal(serie2);
-
-            // Generar puntos para las líneas de tendencia
-            const trend1 = serie1.map(([x]) => [x, null, null, m1 * x + b1, null]);
-            const trend2 = serie2.map(([x]) => [x, null, null, null, m2 * x + b2]);
-            const combined = rows.map((r, i) => {
-              const x = r[0];
-              return [
-                x,
-                r[1],
-                r[2],
-                trend1.find(p => p[0] === x)?.[3] || null,
-                trend2.find(p => p[0] === x)?.[4] || null
-              ];
-            });
-
-            const finalTable = new google.visualization.DataTable();
-            finalTable.addColumn('number', 'X');
-            finalTable.addColumn('number', 'Serie 1');
-            finalTable.addColumn('number', 'Serie 2');
-            finalTable.addColumn('number', 'Tendencia Serie 1');
-            finalTable.addColumn('number', 'Tendencia Serie 2');
-            finalTable.addRows(combined);
-
-            // Mostrar R²
-            document.getElementById('r2_label').innerHTML = 
-              <b>R² Serie 1:</b> ${r21.toFixed(3)}<br>
-              <b>R² Serie 2:</b> ${r22.toFixed(3)}
-            ;
-
-            chart.draw(finalTable, options);
+            document.getElementById('r2_label').innerHTML = `
+              <b style="color:blue">Todas las cargas</b><br>
+              R² = ${r21.toFixed(3)}<br>
+              y = ${formatNum(m1)}x ${signo(b1)} ${formatNum(Math.abs(b1))}<br><br>
+              <b style="color:red">Best Profile</b><br>
+              R² = ${r22.toFixed(3)}<br>
+              y = ${formatNum(m2)}x ${signo(b2)} ${formatNum(Math.abs(b2))}
+            `;
           });
       }
 
-      // Función para calcular regresión lineal
       function regresionLineal(puntos) {
         const n = puntos.length;
         const sumX = puntos.reduce((acc, val) => acc + val[0], 0);
         const sumY = puntos.reduce((acc, val) => acc + val[1], 0);
         const sumXY = puntos.reduce((acc, val) => acc + val[0] * val[1], 0);
-        const sumX2 = puntos.reduce((acc, val) => acc + val[0] * val[0], 0);
-        const sumY2 = puntos.reduce((acc, val) => acc + val[1] * val[1], 0);
+        const sumX2 = puntos.reduce((acc, val) => acc + val[0] ** 2, 0);
+        const sumY2 = puntos.reduce((acc, val) => acc + val[1] ** 2, 0);
 
-        const a = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+        const a = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX ** 2);
         const b = (sumY - a * sumX) / n;
-        const r2 = Math.pow((n * sumXY - sumX * sumY) /
-                  Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY)), 2);
+
+        const rNumer = n * sumXY - sumX * sumY;
+        const rDenom = Math.sqrt((n * sumX2 - sumX ** 2) * (n * sumY2 - sumY ** 2));
+        const r2 = Math.pow(rNumer / rDenom, 2);
+
         return { a, b, r2 };
       }
     </script>
