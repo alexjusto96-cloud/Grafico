@@ -5,20 +5,34 @@
     <title>Carga vs VMP</title>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
-      .r2-label {
+      #chart-container {
+        position: relative;
+        width: 100%;
+        height: 600px;
+      }
+
+      #chart_div {
+        width: 100%;
+        height: 100%;
+      }
+
+      #r2_label {
         position: absolute;
         top: 40px;
         right: 60px;
-        background-color: white;
-        padding: 5px;
-        font-size: 14px;
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 8px 12px;
         border: 1px solid #ccc;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
       }
     </style>
   </head>
   <body>
-    <div id="chart_div" style="width: 100%; height: 600px;"></div>
-    <div class="r2-label" id="r2_label"></div>
+    <div id="chart-container">
+      <div id="chart_div"></div>
+      <div id="r2_label"></div>
+    </div>
 
     <script>
       google.charts.load('current', {'packages':['corechart']});
@@ -47,8 +61,8 @@
               },
               legend: {
                 position: 'bottom',
-                textStyle: { fontSize: 13 },
-                alignment: 'center'
+                alignment: 'center',
+                textStyle: { fontSize: 13 }
               },
               series: {
                 0: {
@@ -74,17 +88,15 @@
 
             const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
 
-            // Calcular línea de tendencia para Serie 1
             const serie1 = rows.filter(r => r[1] != null).map(r => [r[0], r[1]]);
-            const { a: m1, b: b1, r2: r21 } = regresionLineal(serie1);
-
-            // Calcular línea de tendencia para Serie 2
             const serie2 = rows.filter(r => r[2] != null).map(r => [r[0], r[2]]);
+
+            const { a: m1, b: b1, r2: r21 } = regresionLineal(serie1);
             const { a: m2, b: b2, r2: r22 } = regresionLineal(serie2);
 
-            // Generar puntos para las líneas de tendencia
             const trend1 = serie1.map(([x]) => [x, null, null, m1 * x + b1, null]);
             const trend2 = serie2.map(([x]) => [x, null, null, null, m2 * x + b2]);
+
             const combined = rows.map((r, i) => {
               const x = r[0];
               return [
@@ -104,7 +116,7 @@
             finalTable.addColumn('number', 'Tendencia Serie 2');
             finalTable.addRows(combined);
 
-            // Mostrar R²
+            // Mostrar R² en la esquina superior derecha
             document.getElementById('r2_label').innerHTML = `
               <b>R² Serie 1:</b> ${r21.toFixed(3)}<br>
               <b>R² Serie 2:</b> ${r22.toFixed(3)}
@@ -114,7 +126,6 @@
           });
       }
 
-      // Función para calcular regresión lineal
       function regresionLineal(puntos) {
         const n = puntos.length;
         const sumX = puntos.reduce((acc, val) => acc + val[0], 0);
