@@ -39,13 +39,12 @@
         const reg1 = calcularRegresion(serie1);
         const reg2 = calcularRegresion(serie2);
 
-        // construir series
         const data = new google.visualization.DataTable();
         data.addColumn('number', 'VMP (m/s)');
         data.addColumn('number', 'Serie 1');
-        data.addColumn('number', 'Tendencia Serie 1');
         data.addColumn('number', 'Serie 2');
-        data.addColumn('number', 'Tendencia Serie 2');
+        data.addColumn('number', 'Tendencia 1');
+        data.addColumn('number', 'Tendencia 2');
 
         const xVals = [...new Set([...serie1.map(p => p.x), ...serie2.map(p => p.x)])].sort((a, b) => a - b);
         xVals.forEach(x => {
@@ -53,7 +52,7 @@
           const y2 = serie2.find(p => p.x === x)?.y ?? null;
           const t1 = reg1.a + reg1.b * x;
           const t2 = reg2.a + reg2.b * x;
-          data.addRow([x, y1, t1, y2, t2]);
+          data.addRow([x, y1, y2, t1, t2]);
         });
 
         const options = {
@@ -62,30 +61,26 @@
           vAxis: { title: 'Carga (Kg)' },
           legend: { position: 'bottom' },
           series: {
-            0: { color: 'blue', pointShape: 'circle', lineWidth: 0 },
-            1: { color: 'blue', lineWidth: 2 },
-            2: { color: 'red', pointShape: 'circle', lineWidth: 0 },
-            3: { color: 'red', lineWidth: 2 }
-          },
-          annotations: {
-            style: 'line'
+            0: { pointShape: 'circle', color: 'blue', lineWidth: 0 },
+            1: { pointShape: 'circle', color: 'red', lineWidth: 0 },
+            2: { color: 'blue', lineWidth: 2, visibleInLegend: false },
+            3: { color: 'red', lineWidth: 2, visibleInLegend: false }
           }
         };
 
         const chart = new google.visualization.LineChart(document.getElementById('chart_div'));
         chart.draw(data, options);
 
-        // Mostrar ecuaciones y R² abajo del gráfico
-        const info = `
-          <p><b>Serie 1:</b> y = ${reg1.b.toFixed(2)}x + ${reg1.a.toFixed(2)}, R² = ${reg1.r2.toFixed(3)}</p>
-          <p><b>Serie 2:</b> y = ${reg2.b.toFixed(2)}x + ${reg2.a.toFixed(2)}, R² = ${reg2.r2.toFixed(3)}</p>
+        // Mostrar ecuaciones y R2
+        document.getElementById('info_div').innerHTML = `
+          <p><b>Serie 1:</b> y = ${reg1.b.toFixed(2)}x + ${reg1.a.toFixed(2)} | R² = ${reg1.r2.toFixed(3)}</p>
+          <p><b>Serie 2:</b> y = ${reg2.b.toFixed(2)}x + ${reg2.a.toFixed(2)} | R² = ${reg2.r2.toFixed(3)}</p>
         `;
-        document.getElementById('info_div').innerHTML = info;
       }
     </script>
   </head>
   <body>
     <div id="chart_div" style="width: 900px; height: 500px;"></div>
-    <div id="info_div" style="padding-left: 50px; font-family: sans-serif;"></div>
+    <div id="info_div" style="margin-left: 40px; font-family: sans-serif;"></div>
   </body>
 </html>
