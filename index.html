@@ -14,19 +14,20 @@
           );
           const raw = await response.json();
 
-          // Fusionar datos con misma X
-          const merged = {};
-          raw.slice(1).forEach(([x, y1, y2]) => {
-            if (!merged[x]) merged[x] = [x, null, null];
-            if (y1 !== null) merged[x][1] = y1;
-            if (y2 !== null) merged[x][2] = y2;
-          });
+          const header = ['VMP (m/s)', 'Serie 1', 'Serie 2'];
+          const merged = new Map();
 
-          const data = [
-            ['VMP (m/s)', 'Serie 1', 'Serie 2'],
-            ...Object.values(merged)
-          ];
+          // Combinar datos sin sobrescribir
+          for (const [x, y1, y2] of raw.slice(1)) {
+            const key = parseFloat(x).toFixed(3); // clave con redondeo
+            if (!merged.has(key)) merged.set(key, [parseFloat(x), null, null]);
 
+            const row = merged.get(key);
+            if (y1 !== null) row[1] = y1;
+            if (y2 !== null) row[2] = y2;
+          }
+
+          const data = [header, ...Array.from(merged.values())];
           const dataTable = google.visualization.arrayToDataTable(data);
 
           const options = {
