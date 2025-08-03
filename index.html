@@ -9,60 +9,63 @@
       google.charts.setOnLoadCallback(drawChart);
 
       async function drawChart() {
-        const response = await fetch(
-          "https://script.google.com/macros/s/AKfycbz1UMEtWPPXua2EY_CVuCoXjAl414Y9QaooxqBDw5mrvLParCWtVhvl-8w0WpLkCkOzEA/exec"
-        );
+        const response = await fetch("https://script.google.com/macros/s/AKfycbz1UMEtWPPXua2EY_CVuCoXjAl414Y9QaooxqBDw5mrvLParCWtVhvl-8w0WpLkCkOzEA/exec");
         const rawData = await response.json();
 
-        const header = rawData[0];
-        const dataArray = rawData.slice(1);
+        const data1 = [], data2 = [];
 
-        const serie1 = [];
-        const serie2 = [];
-
-        dataArray.forEach(row => {
+        rawData.slice(1).forEach(row => {
           const [x, y1, y2] = row;
-          if (y1 !== null) serie1.push([x, y1]);
-          if (y2 !== null) serie2.push([x, y2]);
+          if (!isNaN(x) && !isNaN(y1)) data1.push([x, y1]);
+          if (!isNaN(x) && !isNaN(y2)) data2.push([x, y2]);
         });
 
-        function regression(points) {
-          const n = points.length;
-          const sumX = points.reduce((a, p) => a + p[0], 0);
-          const sumY = points.reduce((a, p) => a + p[1], 0);
-          const sumXY = points.reduce((a, p) => a + p[0] * p[1], 0);
-          const sumXX = points.reduce((a, p) => a + p[0] * p[0], 0);
+        function getRegressionLine(data) {
+          const n = data.length;
+          const sumX = data.reduce((a, b) => a + b[0], 0);
+          const sumY = data.reduce((a, b) => a + b[1], 0);
+          const sumXY = data.reduce((a, b) => a + b[0] * b[1], 0);
+          const sumX2 = data.reduce((a, b) => a + b[0] * b[0], 0);
           const meanY = sumY / n;
 
-          const m = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-          const b = (sumY - m * sumX) / n;
+          const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+          const intercept = (sumY - slope * sumX) / n;
 
-          const ssTot = points.reduce((a, p) => a + Math.pow(p[1] - meanY, 2), 0);
-          const ssRes = points.reduce((a, p) => a + Math.pow(p[1] - (m * p[0] + b), 2), 0);
-          const r2 = 1 - ssRes / ssTot;
+          const ssTotal = data.reduce((a, b) => a + Math.pow(b[1] - meanY, 2), 0);
+          const ssRes = data.reduce((a, b) => a + Math.pow(b[1] - (slope * b[0] + intercept), 2), 0);
+          const r2 = 1 - ssRes / ssTotal;
 
-          return { m, b, r2 };
+          return { slope, intercept, r2 };
         }
 
-        const reg1 = regression(serie1);
-        const reg2 = regression(serie2);
+        const reg1 = getRegressionLine(data1);
+        const reg2 = getRegressionLine(data2);
 
-        const annotation1 = `y = ${reg1.m.toFixed(2)}x + ${reg1.b.toFixed(2)}\nR² = ${reg1.r2.toFixed(3)}`;
-        const annotation2 = `y = ${reg2.m.toFixed(2)}x + ${reg2.b.toFixed(2)}\nR² = ${reg2.r2.toFixed(3)}`;
-
-        // Construir la DataTable
         const data = new google.visualization.DataTable();
         data.addColumn('number', 'VMP');
         data.addColumn('number', 'Serie 1');
         data.addColumn('number', 'Serie 2');
         data.addColumn({ type: 'string', role: 'annotation' });
 
-        for (let i = 0; i < dataArray.length; i++) {
-          const [x, y1, y2] = dataArray[i];
+        for (let i = 0; i < Math.max(data1.length, data2.length); i++) {
+          const x1 = data1[i]?.[0] ?? null;
+          const y1 = data1[i]?.[1] ?? null;
+          const x2 = data2[i]?.[0] ?? null;
+          const y2 = data2[i]?.[1] ?? null;
+
           let annotation = null;
-          if (i === 0) annotation = annotation1;
-          if (i === 1) annotation = annotation2;
-          data.addRow([x, y1, y2, annotation]);
+          if (i === 0) {
+            annotation = `Serie 1: y = ${reg1.slope.toFixed(2)}x + ${reg1.intercept.toFixed(2)}\nR² = ${reg1.r2.toFixed(3)}`;
+          }
+          if (i === 1) {
+            annotation = `Serie 2: y = ${reg2.slope.toFixed(2)}x + ${reg2.intercept.toFixed(2)}\nR² = ${reg2.r2.toFixed(3)}`;
+          }
+
+          const x = x1 ?? x2;
+          const yA = y1 ?? null;
+          const yB = y2 ?? null;
+
+          data.addRow([x, yA, yB, annotation]);
         }
 
         const options = {
@@ -79,7 +82,7 @@
                   type: 'linear',
                   color: 'blue',
                   visibleInLegend: true,
-                  lineWidth: 2,
+                  lineWidth: 2
                 }
               }
             },
@@ -90,7 +93,7 @@
                   type: 'linear',
                   color: 'red',
                   visibleInLegend: true,
-                  lineWidth: 2,
+                  lineWidth: 2
                 }
               }
             }
@@ -103,7 +106,6 @@
     </script>
   </head>
   <body>
-    <div id="chart_div" style="width: 900px; height: 600px;"></div>
+    <div id="chart_div" style="width: 1000px; height: 600px;"></div>
   </body>
 </html>
-
