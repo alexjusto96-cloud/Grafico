@@ -5,13 +5,13 @@
   <title>Carga vs VMP</title>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <script>
-    google.charts.load('current',{packages:['corechart']});
+    google.charts.load('current', { packages: ['corechart'] });
     google.charts.setOnLoadCallback(drawChart);
 
-    async function drawChart(){
+    async function drawChart() {
       try {
-        const resp = await fetch('https://script.google.com/macros/s/AKfycbz1UMEtWPPXua2EY_CVuCoXjAl414Y9QaooxqBDw5mrvLParCWtVhvl-8w0WpLkCkOzEA/exec');
-        const rawData = await resp.json();
+        const response = await fetch('https://script.google.com/macros/s/AKfycbz1UMEtWPPXua2EY_CVuCoXjAl414Y9QaooxqBDw5mrvLParCWtVhvl-8w0WpLkCkOzEA/exec');
+        const rawData = await response.json();
 
         const data = google.visualization.arrayToDataTable(rawData);
 
@@ -25,18 +25,18 @@
             0: { color: 'blue' },
             1: { color: 'red' }
           },
-          trendlines: { // definir trendlines para ambas series
+          trendlines: {
             0: {
               type: 'linear',
               color: 'blue',
-              labelInLegend: 'Tendencia Serie 1',
+              labelInLegend: 'Tendencia Serie 1',
               showR2: true,
               visibleInLegend: true
             },
             1: {
               type: 'linear',
               color: 'red',
-              labelInLegend: 'Tendencia Serie 2',
+              labelInLegend: 'Tendencia Serie 2',
               showR2: true,
               visibleInLegend: true
             }
@@ -46,9 +46,9 @@
         const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
         chart.draw(data, options);
 
-      } catch(err){
-        document.getElementById('chart_div').innerText = 'Error: '+err;
-        console.error(err);
+      } catch (error) {
+        console.error('Error cargando los datos o dibujando el gráfico:', error);
+        document.getElementById('chart_div').innerText = 'Error cargando los datos o dibujando el gráfico.';
       }
     }
   </script>
@@ -57,5 +57,6 @@
   <div id="chart_div" style="width:100%; height:500px;"></div>
 </body>
 </html>
+
 
 
