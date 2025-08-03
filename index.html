@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>Carga vs VMP</title>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
@@ -35,94 +35,69 @@
     </div>
 
     <script>
-      google.charts.load('current', {'packages':['corechart']});
+      google.charts.load('current', { packages: ['corechart'] });
       google.charts.setOnLoadCallback(drawChart);
 
       function drawChart() {
         fetch('https://script.google.com/macros/s/AKfycbz1UMEtWPPXua2EY_CVuCoXjAl414Y9QaooxqBDw5mrvLParCWtVhvl-8w0WpLkCkOzEA/exec')
-          .then(response => response.json())
-          .then(data => {
+          .then((response) => response.json())
+          .then((data) => {
             const headers = data[0];
             const rows = data.slice(1);
 
             const dataTable = new google.visualization.DataTable();
-            headers.forEach(h => dataTable.addColumn(h.type, h.label));
+            headers.forEach((h) => dataTable.addColumn(h.type, h.label));
             dataTable.addRows(rows);
+
+            // Extraer puntos por serie
+            const serie1 = rows.filter((r) => r[1] != null).map((r) => [r[0], r[1]]);
+            const serie2 = rows.filter((r) => r[2] != null).map((r) => [r[0], r[2]]);
+
+            const { a: m1, b: b1, r2: r21 } = regresionLineal(serie1);
+            const { a: m2, b: b2, r2: r22 } = regresionLineal(serie2);
 
             const options = {
               title: 'Carga vs VMP',
               hAxis: {
                 title: 'VMP (m/s)',
-                titleTextStyle: { italic: true }
+                titleTextStyle: { italic: true },
               },
               vAxis: {
                 title: 'Carga (Kg)',
-                titleTextStyle: { italic: true }
+                titleTextStyle: { italic: true },
               },
               legend: {
                 position: 'bottom',
-                alignment: 'center',
-                textStyle: { fontSize: 13 }
               },
               series: {
+                0: { color: 'blue', pointSize: 5 },
+                1: { color: 'red', pointSize: 5 }
+              },
+              trendlines: {
                 0: {
                   color: 'blue',
-                  pointSize: 5
+                  visibleInLegend: false,
+                  lineWidth: 2,
                 },
                 1: {
                   color: 'red',
-                  pointSize: 5
-                },
-                2: {
-                  color: 'blue',
+                  visibleInLegend: false,
                   lineWidth: 2,
-                  visibleInLegend: false
                 },
-                3: {
-                  color: 'red',
-                  lineWidth: 2,
-                  visibleInLegend: false
-                }
-              }
+              },
+              tooltip: { trigger: 'both' }
             };
 
-            const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
-
-            const serie1 = rows.filter(r => r[1] != null).map(r => [r[0], r[1]]);
-            const serie2 = rows.filter(r => r[2] != null).map(r => [r[0], r[2]]);
-
-            const { a: m1, b: b1, r2: r21 } = regresionLineal(serie1);
-            const { a: m2, b: b2, r2: r22 } = regresionLineal(serie2);
-
-            const trend1 = serie1.map(([x]) => [x, null, null, m1 * x + b1, null]);
-            const trend2 = serie2.map(([x]) => [x, null, null, null, m2 * x + b2]);
-
-            const combined = rows.map((r, i) => {
-              const x = r[0];
-              return [
-                x,
-                r[1],
-                r[2],
-                trend1.find(p => p[0] === x)?.[3] || null,
-                trend2.find(p => p[0] === x)?.[4] || null
-              ];
-            });
-
-            const finalTable = new google.visualization.DataTable();
-            finalTable.addColumn('number', 'X');
-            finalTable.addColumn('number', 'Serie 1');
-            finalTable.addColumn('number', 'Serie 2');
-            finalTable.addColumn('number', 'Tendencia Serie 1');
-            finalTable.addColumn('number', 'Tendencia Serie 2');
-            finalTable.addRows(combined);
+            const chart = new google.visualization.ScatterChart(
+              document.getElementById('chart_div')
+            );
+            chart.draw(dataTable, options);
 
             // Mostrar R² en la esquina superior derecha
             document.getElementById('r2_label').innerHTML = `
               <b>R² Serie 1:</b> ${r21.toFixed(3)}<br>
               <b>R² Serie 2:</b> ${r22.toFixed(3)}
             `;
-
-            chart.draw(finalTable, options);
           });
       }
 
@@ -131,13 +106,17 @@
         const sumX = puntos.reduce((acc, val) => acc + val[0], 0);
         const sumY = puntos.reduce((acc, val) => acc + val[1], 0);
         const sumXY = puntos.reduce((acc, val) => acc + val[0] * val[1], 0);
-        const sumX2 = puntos.reduce((acc, val) => acc + val[0] * val[0], 0);
-        const sumY2 = puntos.reduce((acc, val) => acc + val[1] * val[1], 0);
+        const sumX2 = puntos.reduce((acc, val) => acc + val[0] ** 2, 0);
+        const sumY2 = puntos.reduce((acc, val) => acc + val[1] ** 2, 0);
 
-        const a = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+        const a = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX ** 2);
         const b = (sumY - a * sumX) / n;
-        const r2 = Math.pow((n * sumXY - sumX * sumY) /
-                  Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY)), 2);
+        const rNumer = n * sumXY - sumX * sumY;
+        const rDenom = Math.sqrt(
+          (n * sumX2 - sumX ** 2) * (n * sumY2 - sumY ** 2)
+        );
+        const r2 = (rNumer / rDenom) ** 2;
+
         return { a, b, r2 };
       }
     </script>
