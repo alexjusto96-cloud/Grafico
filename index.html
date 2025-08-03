@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Carga vs VMP</title>
+    <title>Perfil FV</title>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
       .r2-label {
@@ -36,7 +36,13 @@
             dataTable.addRows(rows);
 
             const options = {
-              title: 'Carga vs VMP',
+              title: 'Perfil FV',
+              titleTextStyle: {
+                bold: true,
+                fontSize: 18,
+                color: '#000',
+                alignment: 'center'
+              },
               hAxis: {
                 title: 'VMP (m/s)',
                 titleTextStyle: { italic: true }
@@ -98,16 +104,16 @@
 
             const finalTable = new google.visualization.DataTable();
             finalTable.addColumn('number', 'X');
-            finalTable.addColumn('number', 'Serie 1');
-            finalTable.addColumn('number', 'Serie 2');
+            finalTable.addColumn('number', 'Todas las cargas');
+            finalTable.addColumn('number', 'Best Profile');
             finalTable.addColumn('number', 'Tendencia Serie 1');
             finalTable.addColumn('number', 'Tendencia Serie 2');
             finalTable.addRows(combined);
 
-            // Mostrar R²
+            // Mostrar R² en esquina superior derecha
             document.getElementById('r2_label').innerHTML = `
-              <b>R² Serie 1:</b> ${r21.toFixed(3)}<br>
-              <b>R² Serie 2:</b> ${r22.toFixed(3)}
+              <b>R² Todas las cargas:</b> ${r21.toFixed(3)}<br>
+              <b>R² Best Profile:</b> ${r22.toFixed(3)}
             `;
 
             chart.draw(finalTable, options);
