@@ -5,6 +5,15 @@
     <title>Perfil FV</title>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+      }
+      #title {
+        font-size: 20px;
+        font-weight: bold;
+        margin: 20px 0 10px;
+      }
       #chart-container {
         position: relative;
         width: 100%;
@@ -21,12 +30,13 @@
         background-color: rgba(255, 255, 255, 0.9);
         padding: 8px 12px;
         border: 1px solid #ccc;
-        font-family: Arial, sans-serif;
         font-size: 14px;
+        text-align: left;
       }
     </style>
   </head>
   <body>
+    <div id="title">Perfil FV</div>
     <div id="chart-container">
       <div id="chart_div"></div>
       <div id="r2_label"></div>
@@ -40,7 +50,6 @@
         fetch('https://script.google.com/macros/s/AKfycbz1UMEtWPPXua2EY_CVuCoXjAl414Y9QaooxqBDw5mrvLParCWtVhvl-8w0WpLkCkOzEA/exec')
           .then(response => response.json())
           .then(data => {
-            const headers = data[0];
             const rows = data.slice(1);
 
             const dataTable = new google.visualization.DataTable();
@@ -58,12 +67,6 @@
             const xMin = Math.min(...serie1.map(p => p[0]));
 
             const options = {
-              title: 'Perfil FV',
-              titleTextStyle: {
-                bold: true,
-                fontSize: 18,
-                color: '#000',
-              },
               hAxis: {
                 title: 'VMP (m/s)',
                 titleTextStyle: { italic: true },
