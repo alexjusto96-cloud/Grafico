@@ -14,15 +14,24 @@
         fetch(csvUrl + '&t=' + new Date().getTime())
           .then(response => response.text())
           .then(csvText => {
-            const rows = csvText.trim().split('\n').map(r => r.split(','));
+            const rows = csvText.trim().split('\n').map((r, i) => {
+              const cells = r.split(',');
+              return i === 0
+                ? cells
+                : cells.map(v => Number(v.trim()));
+            });
+
             const data = google.visualization.arrayToDataTable(rows);
+
             const options = {
-              title: 'Mi gráfico dinámico',
+              title: 'Gráfico dinámico',
               hAxis: { title: rows[0][0] },
               vAxis: { title: rows[0][1] },
               legend: { position: 'none' },
-              pointSize: 5
+              pointSize: 5,
+              trendlines: { 0: {} }
             };
+
             const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
             chart.draw(data, options);
           })
@@ -34,3 +43,4 @@
     <div id="chart_div" style="width: 100%; height: 400px;"></div>
   </body>
 </html>
+
