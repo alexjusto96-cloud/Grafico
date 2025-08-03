@@ -16,17 +16,13 @@
 
         const data = google.visualization.arrayToDataTable(rawData);
 
-        // Extraer datos por separado
-        const serie1 = [];
-        const serie2 = [];
-
+        const serie1 = [], serie2 = [];
         for (let i = 1; i < rawData.length; i++) {
           const [x, y1, y2] = rawData[i];
           if (y1 !== null) serie1.push([x, y1]);
           if (y2 !== null) serie2.push([x, y2]);
         }
 
-        // Función para calcular regresión lineal
         function linearRegression(points) {
           const n = points.length;
           const sumX = points.reduce((sum, p) => sum + p[0], 0);
@@ -38,7 +34,6 @@
           const m = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
           const b = (sumY - m * sumX) / n;
 
-          // Calcular R²
           const ssTot = points.reduce((sum, p) => sum + Math.pow(p[1] - meanY, 2), 0);
           const ssRes = points.reduce((sum, p) => sum + Math.pow(p[1] - (m * p[0] + b), 2), 0);
           const r2 = 1 - ssRes / ssTot;
@@ -49,6 +44,18 @@
         const reg1 = linearRegression(serie1);
         const reg2 = linearRegression(serie2);
 
+        const annotation1 = `Serie 1:\ny = ${reg1.m.toFixed(2)}x + ${reg1.b.toFixed(2)}\nR² = ${reg1.r2.toFixed(3)}`;
+        const annotation2 = `Serie 2:\ny = ${reg2.m.toFixed(2)}x + ${reg2.b.toFixed(2)}\nR² = ${reg2.r2.toFixed(3)}`;
+
+        const annotationData = google.visualization.arrayToDataTable([
+          ['X', 'Y1', 'Y2', { role: 'annotation' }],
+          [serie1[0][0], serie1[0][1], null, annotation1],
+          [serie2[0][0], null, serie2[0][1], annotation2]
+        ]);
+
+        const view = new google.visualization.DataView(data);
+        const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
+
         const options = {
           title: 'Carga vs X',
           hAxis: { title: 'VMP (m/s)' },
@@ -58,35 +65,40 @@
             0: {
               color: 'blue',
               trendlines: {
-                0: {
-                  type: 'linear',
-                  visibleInLegend: true,
-                  labelInLegend: `Tendencia Serie 1: y = ${reg1.m.toFixed(2)}x + ${reg1.b.toFixed(2)} (R² = ${reg1.r2.toFixed(3)})`,
-                  color: 'blue'
-                }
+                0: { type: 'linear', visibleInLegend: true, color: 'blue' }
               }
             },
             1: {
               color: 'red',
               trendlines: {
-                0: {
-                  type: 'linear',
-                  visibleInLegend: true,
-                  labelInLegend: `Tendencia Serie 2: y = ${reg2.m.toFixed(2)}x + ${reg2.b.toFixed(2)} (R² = ${reg2.r2.toFixed(3)})`,
-                  color: 'red'
-                }
+                0: { type: 'linear', visibleInLegend: true, color: 'red' }
               }
             }
           }
         };
 
-        const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
-        chart.draw(data, options);
+        // Combina datos con anotaciones
+        const joinedData = new google.visualization.DataTable();
+        joinedData.addColumn('number', 'VMP (m/s)');
+        joinedData.addColumn('number', 'Serie 1');
+        joinedData.addColumn('number', 'Serie 2');
+        joinedData.addColumn({ type: 'string', role: 'annotation' });
+
+        for (let i = 1; i < rawData.length; i++) {
+          const [x, y1, y2] = rawData[i];
+          let annotation = null;
+          if (i === 1) annotation = annotation1;
+          if (i === 2) annotation = annotation2;
+          joinedData.addRow([x, y1, y2, annotation]);
+        }
+
+        chart.draw(joinedData, options);
       }
     </script>
   </head>
   <body>
-    <div id="chart_div" style="width: 900px; height: 500px;"></div>
+    <div id="chart_div" style="width: 1000px; height: 600px;"></div>
   </body>
 </html>
+
 
