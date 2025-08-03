@@ -12,23 +12,9 @@
           const response = await fetch(
             'https://script.google.com/macros/s/AKfycbz1UMEtWPPXua2EY_CVuCoXjAl414Y9QaooxqBDw5mrvLParCWtVhvl-8w0WpLkCkOzEA/exec'
           );
-          const raw = await response.json();
+          const raw = await response.json(); // ya viene con los nulls
 
-          const header = ['VMP (m/s)', 'Serie 1', 'Serie 2'];
-          const merged = new Map();
-
-          // Combinar datos sin sobrescribir
-          for (const [x, y1, y2] of raw.slice(1)) {
-            const key = parseFloat(x).toFixed(3); // clave con redondeo
-            if (!merged.has(key)) merged.set(key, [parseFloat(x), null, null]);
-
-            const row = merged.get(key);
-            if (y1 !== null) row[1] = y1;
-            if (y2 !== null) row[2] = y2;
-          }
-
-          const data = [header, ...Array.from(merged.values())];
-          const dataTable = google.visualization.arrayToDataTable(data);
+          const data = google.visualization.arrayToDataTable(raw);
 
           const options = {
             title: 'Carga vs X',
@@ -71,7 +57,7 @@
           };
 
           const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
-          chart.draw(dataTable, options);
+          chart.draw(data, options);
         } catch (err) {
           document.getElementById('chart_div').innerText = 'Error al cargar datos: ' + err;
           console.error(err);
@@ -83,5 +69,6 @@
     <div id="chart_div" style="width: 100%; height: 500px;"></div>
   </body>
 </html>
+
 
 
