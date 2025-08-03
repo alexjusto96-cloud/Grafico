@@ -4,94 +4,132 @@
     <meta charset="utf-8">
     <title>Carga vs VMP</title>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <style>
+      .r2-label {
+        position: absolute;
+        top: 40px;
+        right: 60px;
+        background-color: white;
+        padding: 5px;
+        font-size: 14px;
+        border: 1px solid #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="chart_div" style="width: 100%; height: 600px;"></div>
+    <div class="r2-label" id="r2_label"></div>
+
     <script>
       google.charts.load('current', {'packages':['corechart']});
       google.charts.setOnLoadCallback(drawChart);
 
       function drawChart() {
-        fetch("https://script.google.com/macros/s/AKfycbz1UMEtWPPXua2EY_CVuCoXjAl414Y9QaooxqBDw5mrvLParCWtVhvl-8w0WpLkCkOzEA/exec")
+        fetch('https://script.google.com/macros/s/AKfycbz1UMEtWPPXua2EY_CVuCoXjAl414Y9QaooxqBDw5mrvLParCWtVhvl-8w0WpLkCkOzEA/exec')
           .then(response => response.json())
           .then(data => {
-            var dataTable = new google.visualization.DataTable();
-            dataTable.addColumn('number', 'VMP (m/s)');
-            dataTable.addColumn('number', 'Serie 1');
-            dataTable.addColumn('number', 'Serie 2');
-            dataTable.addRows(data);
+            const headers = data[0];
+            const rows = data.slice(1);
 
-            var options = {
+            const dataTable = new google.visualization.DataTable();
+            headers.forEach(h => dataTable.addColumn(h.type, h.label));
+            dataTable.addRows(rows);
+
+            const options = {
               title: 'Carga vs VMP',
               hAxis: {
                 title: 'VMP (m/s)',
                 titleTextStyle: { italic: true }
               },
               vAxis: {
-                title: 'Carga (Kg)'
+                title: 'Carga (Kg)',
+                titleTextStyle: { italic: true }
               },
               legend: {
                 position: 'bottom',
-                textStyle: { color: '#000' }
-              },
-              trendlines: {
-                0: {
-                  type: 'linear',
-                  color: 'blue',
-                  showR2: true,
-                  visibleInLegend: false
-                },
-                1: {
-                  type: 'linear',
-                  color: 'red',
-                  showR2: true,
-                  visibleInLegend: false
-                }
+                textStyle: { fontSize: 13 },
+                alignment: 'center'
               },
               series: {
-                0: { color: 'blue', pointShape: 'circle' },
-                1: { color: 'red', pointShape: 'circle' }
+                0: {
+                  color: 'blue',
+                  pointSize: 5
+                },
+                1: {
+                  color: 'red',
+                  pointSize: 5
+                },
+                2: {
+                  color: 'blue',
+                  lineWidth: 2,
+                  visibleInLegend: false
+                },
+                3: {
+                  color: 'red',
+                  lineWidth: 2,
+                  visibleInLegend: false
+                }
               }
             };
 
-            var chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
-            chart.draw(dataTable, options);
+            const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
 
-            // Espera a que se renderice para insertar el R²
-            google.visualization.events.addListener(chart, 'ready', function () {
-              const layout = chart.getChartLayoutInterface();
-              const container = document.getElementById('chart_div');
+            // Calcular línea de tendencia para Serie 1
+            const serie1 = rows.filter(r => r[1] != null).map(r => [r[0], r[1]]);
+            const { a: m1, b: b1, r2: r21 } = regresionLineal(serie1);
 
-              // Elimina cualquier rótulo previo
-              const oldAnnotations = container.querySelectorAll('.r2-annotation');
-              oldAnnotations.forEach(e => e.remove());
+            // Calcular línea de tendencia para Serie 2
+            const serie2 = rows.filter(r => r[2] != null).map(r => [r[0], r[2]]);
+            const { a: m2, b: b2, r2: r22 } = regresionLineal(serie2);
 
-              // R² de las dos series
-              const r2Text = document.createElement('div');
-              r2Text.className = 'r2-annotation';
-              r2Text.innerHTML = `
-                <div style="text-align:right; font-size: 14px; font-family: sans-serif;">
-                  <b style="color:blue">R² (Serie 1)</b>: ${chart.getOption('trendlines')[0]?.rSquared?.toFixed?.(3) || '—'}<br>
-                  <b style="color:red">R² (Serie 2)</b>: ${chart.getOption('trendlines')[1]?.rSquared?.toFixed?.(3) || '—'}
-                </div>`;
-              r2Text.style.position = 'absolute';
-              r2Text.style.top = '40px';
-              r2Text.style.right = '60px';
-              container.appendChild(r2Text);
+            // Generar puntos para las líneas de tendencia
+            const trend1 = serie1.map(([x]) => [x, null, null, m1 * x + b1, null]);
+            const trend2 = serie2.map(([x]) => [x, null, null, null, m2 * x + b2]);
+            const combined = rows.map((r, i) => {
+              const x = r[0];
+              return [
+                x,
+                r[1],
+                r[2],
+                trend1.find(p => p[0] === x)?.[3] || null,
+                trend2.find(p => p[0] === x)?.[4] || null
+              ];
             });
-          })
-          .catch(error => {
-            console.error("Error al cargar los datos:", error);
+
+            const finalTable = new google.visualization.DataTable();
+            finalTable.addColumn('number', 'X');
+            finalTable.addColumn('number', 'Serie 1');
+            finalTable.addColumn('number', 'Serie 2');
+            finalTable.addColumn('number', 'Tendencia Serie 1');
+            finalTable.addColumn('number', 'Tendencia Serie 2');
+            finalTable.addRows(combined);
+
+            // Mostrar R²
+            document.getElementById('r2_label').innerHTML = `
+              <b>R² Serie 1:</b> ${r21.toFixed(3)}<br>
+              <b>R² Serie 2:</b> ${r22.toFixed(3)}
+            `;
+
+            chart.draw(finalTable, options);
           });
       }
-    </script>
-    <style>
-      #chart_div {
-        position: relative;
-        width: 100%;
-        height: 600px;
+
+      // Función para calcular regresión lineal
+      function regresionLineal(puntos) {
+        const n = puntos.length;
+        const sumX = puntos.reduce((acc, val) => acc + val[0], 0);
+        const sumY = puntos.reduce((acc, val) => acc + val[1], 0);
+        const sumXY = puntos.reduce((acc, val) => acc + val[0] * val[1], 0);
+        const sumX2 = puntos.reduce((acc, val) => acc + val[0] * val[0], 0);
+        const sumY2 = puntos.reduce((acc, val) => acc + val[1] * val[1], 0);
+
+        const a = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+        const b = (sumY - a * sumX) / n;
+        const r2 = Math.pow((n * sumXY - sumX * sumY) /
+                  Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY)), 2);
+        return { a, b, r2 };
       }
-    </style>
-  </head>
-  <body>
-    <div id="chart_div"></div>
+    </script>
   </body>
 </html>
 
